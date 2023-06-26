@@ -1,0 +1,439 @@
+{
+  "metadata": {
+    "language_info": {
+      "codemirror_mode": {
+        "name": "python",
+        "version": 3
+      },
+      "file_extension": ".py",
+      "mimetype": "text/x-python",
+      "name": "python",
+      "nbconvert_exporter": "python",
+      "pygments_lexer": "ipython3",
+      "version": "3.8"
+    },
+    "kernelspec": {
+      "name": "python",
+      "display_name": "Python (Pyodide)",
+      "language": "python"
+    }
+  },
+  "nbformat_minor": 4,
+  "nbformat": 4,
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "source": "Peer Review #4: BBC News Classification Kaggle Mini Project",
+      "metadata": {}
+    },
+    {
+      "cell_type": "code",
+      "source": "#Import Packages\nimport numpy as np \nimport pandas as pd \nimport matplotlib.pyplot as plt\nimport sklearn\n\nfrom sklearn.feature_extraction.text import TfidfVectorizer\nfrom sklearn.feature_selection import chi2\nfrom sklearn.decomposition import PCA\nfrom sklearn.manifold import TSNE\nfrom sklearn.decomposition import TruncatedSVD, NMF\nfrom sklearn.cluster import KMeans\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import cross_val_score\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import accuracy_score, confusion_matrix\nfrom IPython.display import display\n",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 16,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": "#Import Data Files\ndf_Test = pd.read_csv('BBC News Test.csv')\ndf_Test.head()",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 7,
+      "outputs": [
+        {
+          "execution_count": 7,
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": "   ArticleId                                               Text\n0       1018  qpr keeper day heads for preston queens park r...\n1       1319  software watching while you work software that...\n2       1138  d arcy injury adds to ireland woe gordon d arc...\n3        459  india s reliance family feud heats up the ongo...\n4       1020  boro suffer morrison injury blow middlesbrough...",
+            "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>ArticleId</th>\n      <th>Text</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>1018</td>\n      <td>qpr keeper day heads for preston queens park r...</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>1319</td>\n      <td>software watching while you work software that...</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>1138</td>\n      <td>d arcy injury adds to ireland woe gordon d arc...</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>459</td>\n      <td>india s reliance family feud heats up the ongo...</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>1020</td>\n      <td>boro suffer morrison injury blow middlesbrough...</td>\n    </tr>\n  </tbody>\n</table>\n</div>"
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "df_Train = pd.read_csv('BBC News Train.csv')\ndf_Train.head()",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 8,
+      "outputs": [
+        {
+          "execution_count": 8,
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": "   ArticleId                                               Text  Category\n0       1833  worldcom ex-boss launches defence lawyers defe...  business\n1        154  german business confidence slides german busin...  business\n2       1101  bbc poll indicates economic gloom citizens in ...  business\n3       1976  lifestyle  governs mobile choice  faster  bett...      tech\n4        917  enron bosses in $168m payout eighteen former e...  business",
+            "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>ArticleId</th>\n      <th>Text</th>\n      <th>Category</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>1833</td>\n      <td>worldcom ex-boss launches defence lawyers defe...</td>\n      <td>business</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>154</td>\n      <td>german business confidence slides german busin...</td>\n      <td>business</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>1101</td>\n      <td>bbc poll indicates economic gloom citizens in ...</td>\n      <td>business</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>1976</td>\n      <td>lifestyle  governs mobile choice  faster  bett...</td>\n      <td>tech</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>917</td>\n      <td>enron bosses in $168m payout eighteen former e...</td>\n      <td>business</td>\n    </tr>\n  </tbody>\n</table>\n</div>"
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "sample_solution_data = pd.read_csv('BBC News Sample Solution.csv')\nsample_solution_data.head()",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 37,
+      "outputs": [
+        {
+          "execution_count": 37,
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": "   ArticleId       Category\n0       1018          sport\n1       1319           tech\n2       1138       business\n3        459  entertainment\n4       1020       politics",
+            "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>ArticleId</th>\n      <th>Category</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>1018</td>\n      <td>sport</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>1319</td>\n      <td>tech</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>1138</td>\n      <td>business</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>459</td>\n      <td>entertainment</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>1020</td>\n      <td>politics</td>\n    </tr>\n  </tbody>\n</table>\n</div>"
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "# Check the unique labels \nuniq_cat = sample_solution_data['Category'].unique()\nprint(uniq_cat)",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 38,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "['sport' 'tech' 'business' 'entertainment' 'politics']\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "#Data Exploration\ndf_Train.sample(5)\n    #1490 rows, cols = ['AtricleID', 'Text', 'Category]",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 10,
+      "outputs": [
+        {
+          "execution_count": 10,
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": "      ArticleId                                               Text  Category\n463        1688  immigration to be election issue immigration a...  politics\n1187       1818  baron kinnock makes lords debut former labour ...  politics\n1272        960  optimism remains over uk housing the uk proper...  business\n975         709  lloyd s of london head chides fsa the head of ...  business\n20         1547  hewitt overcomes wobble in sydney lleyton hewi...     sport",
+            "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>ArticleId</th>\n      <th>Text</th>\n      <th>Category</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>463</th>\n      <td>1688</td>\n      <td>immigration to be election issue immigration a...</td>\n      <td>politics</td>\n    </tr>\n    <tr>\n      <th>1187</th>\n      <td>1818</td>\n      <td>baron kinnock makes lords debut former labour ...</td>\n      <td>politics</td>\n    </tr>\n    <tr>\n      <th>1272</th>\n      <td>960</td>\n      <td>optimism remains over uk housing the uk proper...</td>\n      <td>business</td>\n    </tr>\n    <tr>\n      <th>975</th>\n      <td>709</td>\n      <td>lloyd s of london head chides fsa the head of ...</td>\n      <td>business</td>\n    </tr>\n    <tr>\n      <th>20</th>\n      <td>1547</td>\n      <td>hewitt overcomes wobble in sydney lleyton hewi...</td>\n      <td>sport</td>\n    </tr>\n  </tbody>\n</table>\n</div>"
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "df_Train.info()",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 11,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "<class 'pandas.core.frame.DataFrame'>\nRangeIndex: 1490 entries, 0 to 1489\nData columns (total 3 columns):\n #   Column     Non-Null Count  Dtype \n---  ------     --------------  ----- \n 0   ArticleId  1490 non-null   int64 \n 1   Text       1490 non-null   object\n 2   Category   1490 non-null   object\ndtypes: int64(1), object(2)\nmemory usage: 23.4+ KB\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "df_Test.sample(5)",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 12,
+      "outputs": [
+        {
+          "execution_count": 12,
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": "     ArticleId                                               Text\n372        925  india opens skies to competition india will al...\n392        525  disney backs sony dvd technology a next genera...\n217        545  bening makes awards breakthrough film actress ...\n684        599  teenagers to be allowed to be mps teenagers wi...\n64         369  emi shares hit by profit warning shares in mus...",
+            "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>ArticleId</th>\n      <th>Text</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>372</th>\n      <td>925</td>\n      <td>india opens skies to competition india will al...</td>\n    </tr>\n    <tr>\n      <th>392</th>\n      <td>525</td>\n      <td>disney backs sony dvd technology a next genera...</td>\n    </tr>\n    <tr>\n      <th>217</th>\n      <td>545</td>\n      <td>bening makes awards breakthrough film actress ...</td>\n    </tr>\n    <tr>\n      <th>684</th>\n      <td>599</td>\n      <td>teenagers to be allowed to be mps teenagers wi...</td>\n    </tr>\n    <tr>\n      <th>64</th>\n      <td>369</td>\n      <td>emi shares hit by profit warning shares in mus...</td>\n    </tr>\n  </tbody>\n</table>\n</div>"
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "df_Test.info()",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 13,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "<class 'pandas.core.frame.DataFrame'>\nRangeIndex: 735 entries, 0 to 734\nData columns (total 2 columns):\n #   Column     Non-Null Count  Dtype \n---  ------     --------------  ----- \n 0   ArticleId  735 non-null    int64 \n 1   Text       735 non-null    object\ndtypes: int64(1), object(1)\nmemory usage: 8.7+ KB\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "# we already know that both datasets have no null values from Non-Null counts\n# so now we examine the datasets for empty strings\n\nemp_str_train = np.where(df_Train.applymap(lambda x: x == ''))\nprint('emp_str_train: ', emp_str_train)\n\nemp_str_test = np.where(df_Test.applymap(lambda x: x == ''))\nprint('emp_str_test: ', emp_str_test)\n\n# There isn't null value or empty string in the df",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 20,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "emp_str_train:  (array([], dtype=int32), array([], dtype=int32))\nemp_str_test:  (array([], dtype=int32), array([], dtype=int32))\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "# Visualize the amount of articles in each category\n#import seaborn as sns\narticle_count = df_Train.groupby('Category').size()\nprint(article_count)\n\n#sns.barplot(article_count, x=article_count.index, y=article_count)",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 25,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "Category\nbusiness         336\nentertainment    273\npolitics         274\nsport            346\ntech             261\ndtype: int64\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "# check the amount of word in each article \n\nword_count = df_Train['Text'].str.len()\nprint(word_count)\n\n#sns.histplot(word_count, kde=True)",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 27,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "0       1866\n1       2016\n2       3104\n3       3618\n4       2190\n        ... \n1485    1266\n1486    3111\n1487    1370\n1488    3242\n1489    1723\nName: Text, Length: 1490, dtype: int64\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "# slightly positively skewed...need to dig in a little more\n\nprint('median word count: ', word_count.median())\nprint('mean word count: ', word_count.mean())\n\nlt1 = sum(word_count > 7500)\nprint('word count larger than 7500: ', lt1)\n\nlt2 = sum(word_count > 10000)\nprint('word count larger than 10000: ', lt2)",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 29,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "median word count:  1961.0\nmean word count:  2233.461744966443\nword count larger than 7500:  8\nword count larger than 10000:  3\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "# exclude the articles to clearly define weight for each word\n\ntrain_data = df_Train[df_Train['Text'].str.len() <= 7500]\nprint(train_data.info())",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 30,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "<class 'pandas.core.frame.DataFrame'>\nInt64Index: 1482 entries, 0 to 1489\nData columns (total 3 columns):\n #   Column     Non-Null Count  Dtype \n---  ------     --------------  ----- \n 0   ArticleId  1482 non-null   int64 \n 1   Text       1482 non-null   object\n 2   Category   1482 non-null   object\ndtypes: int64(1), object(2)\nmemory usage: 34.7+ KB\nNone\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "# Final cleaning steps before tokenizing words\n\nurl = np.where(train_data.applymap(lambda x: x == 'https'))\nprint('url: ', url)\nemail = np.where(train_data.applymap(lambda x: x == '@'))\nprint('email: ', email)",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 31,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "url:  (array([], dtype=int32), array([], dtype=int32))\nemail:  (array([], dtype=int32), array([], dtype=int32))\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "# Parameters\ntfidf = TfidfVectorizer(sublinear_tf=True, stop_words='english', ngram_range=(1, 2),\n                        min_df=5, norm='l2', encoding='latin-1', lowercase=True)\n\ntrain_features = tfidf.fit_transform(train_data['Text']).toarray()\ntest_features = tfidf.transform(df_Test['Text']).toarray()\nprint(train_features.shape)",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 33,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "(1482, 9742)\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "# now we can check the most correlated terms to each categorie using chi-squared test\n\ncat_id_df = pd.DataFrame(zip(uniq_cat, list(range(5))), columns=['Category', 'cat_id'])\ncat2id = dict(cat_id_df.values)\nid2cat = dict(cat_id_df[['cat_id', 'Category']].values)\ntrain_data = train_data.merge(cat_id_df, on='Category', how='left')\n\ntrue_labels = train_data.cat_id\n\ntrain_data.head()\ncat_id_df\n\nfor cat, cat_id in sorted(cat2id.items()):\n    chi2_train_features = chi2(train_features, true_labels==cat_id)\n    idx = np.argsort(chi2_train_features[0])\n    train_f_names = np.array(tfidf.get_feature_names_out())[idx]\n    top_f = train_f_names[-10:]\n    print(cat, top_f)",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 39,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "business ['stock' 'prices' 'market' 'profits' 'economic' 'economy' 'oil' 'growth'\n 'bank' 'shares']\nentertainment ['festival' 'actress' 'award' 'oscar' 'awards' 'album' 'band' 'singer'\n 'actor' 'film']\npolitics ['minister' 'tony blair' 'secretary' 'tory' 'tories' 'mr blair' 'party'\n 'blair' 'election' 'labour']\nsport ['arsenal' 'champion' 'win' 'game' 'chelsea' 'season' 'injury' 'match'\n 'coach' 'cup']\ntech ['pc' 'online' 'mobile' 'digital' 'web' 'microsoft' 'computer'\n 'technology' 'software' 'users']\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "tsne_features = TSNE().fit_transform(train_features)\n#plt.scatter(train_features)\n#sns.scatterplot(x=tsne_features[:,0], y=tsne_features[:,1], hue=true_labels, palette='deep').set(title='tSNE reduced features')#",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 44,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": "#Unsupervised Modeling\ndef mapping(predictions, true_labels):\n    labmap = {}\n    for pred, lab in zip(predictions, true_labels):\n        labmap[pred] = lab\n    mapped = [labmap[x] for x in predictions]\n    return mapped\n\n# kmeans clustering with svd\nsvd = TruncatedSVD(n_components=5, random_state=0)\ntrain_features_svd = svd.fit_transform(train_features)\ntest_features_svd = svd.transform(test_features) # submit for accuracy\n\nkmeans_svd = KMeans(n_clusters=5, n_init=10, random_state=0)\nkmeans_svd.fit(train_features_svd)\ntrain_pred_svd = kmeans_svd.labels_\n\ntrain_acc_svd = accuracy_score(true_labels, mapping(train_pred_svd, true_labels))\nprint(\"SVD train accuracy:\", train_acc_svd)\n\n# kmeans with nmf\nnmf = NMF(n_components=5, random_state=0)\ntrain_features_nmf = nmf.fit_transform(train_features)\ntest_features_nmf = nmf.transform(test_features) # submit for accuracy\n\nkmeans_nmf = KMeans(n_clusters=5, n_init=10, random_state=0)\nkmeans_nmf.fit(train_features_nmf)\ntrain_pred_nmf = kmeans_nmf.labels_\n\ntrain_acc_nmf = accuracy_score(true_labels, mapping(train_pred_nmf, true_labels))\nprint('NMF train accuracy:', train_acc_nmf)",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 45,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "SVD train accuracy: 0.9460188933873145\nNMF train accuracy: 0.9075573549257759\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "# submit test predictions to kaggle competetion to get accuracy on test data\ntest_pred_svd = kmeans_svd.predict(test_features_svd)\ntest_pred_nmf = kmeans_nmf.predict(test_features_nmf)\n\nkmeans_lab2cat_svd = {0: 'sport', 1: 'entertainment', 2: 'tech', 3: 'politics', 4: 'business'}\ntest_pred_cat_svd = [kmeans_lab2cat_svd[lab] for lab in test_pred_svd]\nkmeans_lab2cat_nmf = {0: 'sport', 1: 'business', 2: 'politics', 3: 'tech', 4: 'entertainment'}\ntest_pred_cat_nmf = [kmeans_lab2cat_nmf[lab] for lab in test_pred_nmf]\n\nsvd_df = pd.DataFrame({'ArticleId': df_Test['ArticleId'], 'Category': test_pred_cat_svd})\nsvd_df.to_csv('svd.csv', index=False)\n\n#SVD and NMF yielded accuracy of 0.9551 and 0.91292",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 47,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": "# let's also have a look at the confusion matrix of the train data\n\n#import seaborn as sns\nsvd_conf_mtx = confusion_matrix(train_data['Category'], [kmeans_lab2cat_svd[lab] for lab in train_pred_svd])\n#sns.heatmap(svd_conf_mtx, xticklabels=cat_id_df.Category.values, yticklabels=cat_id_df.Category.values,\n          # annot=True, fmt='d', cmap='Blues')\nplt.xlabel('SVD Pred')\nplt.ylabel('True')",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 61,
+      "outputs": [
+        {
+          "execution_count": 61,
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": "Text(0, 0.5, 'True')"
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "<Figure size 640x480 with 1 Axes>",
+            "image/png": "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hAAAgLUIIQAAYC1CCAAAWIsQAgAA1iKEAACAtQghAABgLUIIAABYixACAADWIoQAAIC1CCEAAGAtQggAAFiLEAIAANYihAAAgLUIIQAAYC1CCAAAWIsQAgAA1iKEAACAtQghAABgLUIIAABYixACAADWIoQAAIC1CCEAAGAtQggAAFiLEAIAANYihAAAgLUIIQAAYC1CCAAAWIsQAgAA1iKEAACAtQghAABgLUIIAABYixACAADWIoQAAIC1CCEAAGAtQggAAFiLEAIAANYihAAAgLUIIQAAYC1CCAAAWIsQAgAA1iKEAACAtQghAABgLUIIAABYixACAADWIoQAAIC1CCEAAGAtQggAAFiLEAIAANaKeghVVFQoPT1dSUlJ8ng82rZt2ynXvvjii5o2bZrOPfdcuVwuZWdn65VXXongtAAAIJZENYTWrFmjwsJClZaWaseOHcrIyFBubq7279/f7frXXntN06ZN08aNG1VfX6+rrrpK06dP186dOyM8OQAAiAUOY4yJ1oN7PB5deumleuKJJyRJgUBAaWlpWrBggYqKinp0HxdffLHy8vJUUlLSo/V+v19ut1s+n08ul6vPswMAgMgJ1+t31M4IdXR0qL6+Xjk5Of8ZJi5OOTk5qqur69F9BAIBtbW16eyzzz7lmvb2dvn9/i43AAAAKYohdPDgQXV2diolJaXL9pSUFLW2tvboPh5++GEdOXJEM2bMOOWa8vJyud3u4C0tLe0LzQ0AAGJH1C+W7qtnnnlGZWVlWrt2rYYNG3bKdcXFxfL5fMFbc3NzBKcEAABnsoRoPfDQoUMVHx8vr9fbZbvX61Vqaupp933uuec0Z84crVu3rstba91xOp1yOp1feF4AABB7onZGKDExUZMnT1ZtbW1wWyAQUG1trbKzs0+537PPPquCggI9++yzuu666yIxKgAAiFFROyMkSYWFhcrPz9eUKVOUlZWlRx99VEePHlVBQYGk429rffzxx1q9erWk42+H5efn67HHHpPH4wleS5ScnCy32x215wEAAPqnqIZQXl6eDhw4oJKSErW2tiozM1M1NTXBC6hbWlq0d+/e4Prf/e53+vzzz3XnnXfqzjvvDG7Pz89XVVVVpMcHAAD9XFQ/Ryga+BwhAAD6n5j7HCEAAIBoI4QAAIC1CCEAAGAtQggAAFiLEAIAANYihAAAgLUI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yxa99dZbeumll/Too4/q+eef1x133BGJkWNWX47F1KlTVV1drby8PCUmJio1NVVut1sVFRWRGBn/JVSv3zEVQogdzzzzjMrKyrR27VoNGzYs2uNYp7OzU7fccovKyso0bty4aI9jvUAgIIfDoerqamVlZenaa6/V8uXLtWrVKv6DLcJ2796thQsXqqSkRPX19aqpqdGHH36oefPmRXs09FFM/Wfe0KFDFR8fL6/X22W71+tVampqt/ukpqZ2u97lcik5OTlss8a6vhyLE5577jnNmTNH69atO+m0J/qmt8ejra1N27dv186dO3XXXXdJOv5ibIxRQkKC/vKXv+jqq6+OyOyxpi9/N4YPH66RI0fK7XYHt1100UUyxuijjz7SBRdcENaZY1VfjkV5ebmmTp2qJUuWSJImTpyogQMH6utf/7qWLl2q4cOHh31uHBeq1++YOiOUmJioyZMnq7a2NrgtEAiotrZW2dnZ3e6TnZ3dZb0kbdq06ZTr0TN9ORaS9Oyzz6qgoEDPPvusrrvuukiMaoXeHg+Xy6U333xTDQ0Nwdu8efM0fvx4NTQ0yOPxRHL8mNKXvxtTp07Vvn37dOTIkeC2d955R3FxcRo1alTYZ45VfTkWx44dU1xc15fO+Ph4SZLhqzsjKmSv3726tLofeO6554zT6TRVVVVm9+7d5gc/+IEZMmSIaW1tNcYYU1RUZL7//e8H15/49bslS5aYxsZGU1FRwa/Ph0hvj0V1dbVJSEgwFRUVpqWlJXg7fPhwtJ5CTOnt8fi/+K2x0OntsWhrazOjRo0yN910k9m1a5f529/+Zi644AIzZ86caD2FmNHbY1FZWWkSEhLMk08+ad5//32zZcsWM2XKFJOVlRWtpxAz2trazM6dO83OnTuNJLN8+XKzc+dO869//csYE77X75gLIWOMefzxx83o0aNNYmKiycrKMn//+9+Df5afn2+uuOKKLutfffVVk5mZaRITE82YMWNMZWVlZAeOYb05FldccYWRdNItPz8/8oPHqN7+3fhvhFBo9fZYNDY2mpycHJOcnGxGjRplCgsLzbFjxyI8dWzq7bH49a9/bSZMmGCSk5PN8OHDza233mo++uijCE8de1599dXTvgaE6/XbYQzn8gAAgJ1i6hohAACA3iCEAACAtQghAABgLUIIAABYixACAADWIoQAAIC1CCEAAGAtQggAvqDNmzfL4XDo8OHD0R4FQC8RQgBC7sCBA5o/f75Gjx4tp9Op1NRU5ebmauvWrero6NDQoUP185//vNt9H3zwQaWkpOizzz5TVVWVHA6HHA6H4uPj9aUvfUkej0cPPPCAfD7faWc4EScnbikpKbrxxhvV1NQUjqcMoJ8ihACE3I033qidO3dq1apVeuedd7R+/XpdeeWVOnTokBITEzVz5kxVVlaetJ8xRlVVVZo1a5bOOussSce/ALalpUUfffSR3njjDf3gBz/Q6tWrlZmZqX379v3PWd5++23t27dP69at065duzR9+nR1dnZ2+9iff/75F3/yAPqXL/bNIADQ1SeffGIkmc2bN59yzT//+U8jybz++utdtp/4rqHGxkZjzPEvuHS73Sft7/V6zdChQ82tt956ysc4cV+ffPJJcFt1dbWRZPbs2RP8840bN5pJkyaZs846y7z66qums7PTLFu2zKSnp5ukpCQzceJEs27dui73vWHDBnPBBReYpKQkc+WVV5rKysqTHgtA/8AZIQAhNWjQIA0aNEgvv/yy2tvbu13z1a9+VZdeeqlWrlzZZXtlZaW+9rWv6cILLzztYwwbNky33nqr1q9f3+3ZnVNJTk6WJHV0dAS3FRUV6ec//7kaGxs1ceJElZeXa/Xq1VqxYoV27dqlRYsWaebMmfrb3/4mSWpubtYNN9yg6dOnq6GhQXPmzFFRUVGPZwBwZiGEAIRUQkKCqqqqtGrVKg0ZMkRTp07Vfffdp3/+859d1t1+++1at26djhw5Iklqa2vT888/r9mzZ/focS688EK1tbXp0KFDPVrf0tKihx9+WCNHjtT48eOD2x944AFNmzZNX/7ylzVw4EAtW7ZMK1euVG5ursaMGaPbbrtNM2fO1G9/+1tJ0m9+8xt9+ctf1iOPPKLx48fr1ltv1W233dajGQCceQghACF34403at++fVq/fr2++c1vavPmzZo0aZKqqqqCa773ve+ps7NTa9eulSStWbNGcXFxysvL69FjGGMkSQ6H47TrRo0apYEDB2rEiBE6evSoXnjhBSUmJgb/fMqUKcF/fu+993Ts2DFNmzYteGZr0KBBWr16td5//31JUmNjozweT5fHyM7O7tHMAM48CdEeAEBsSkpK0rRp0zRt2jT99Kc/1Zw5c1RaWho8e+JyuXTTTTepsrJSs2fPVmVlpWbMmKFBgwb16P4bGxvlcrl0zjnnnHbd66+/LpfLpWHDhmnw4MEn/fnAgQOD/3zi7NSGDRs0cuTILuucTmeP5gLQvxBCACJiwoQJevnll7tsu/3223XllVfqT3/6k9544w398pe/7NF97d+/X88884yuv/56xcWd/sT2+eefryFDhvR4RqfTqb179+qKK67ods1FF12k9evXd9n297//vUf3D+DMQwgBCKlDhw7pu9/9rmbPnq2JEydq8ODB2r59ux566CF9+9vf7rL28ssv19ixYzVr1ixdeOGF+trXvnbS/Rlj1NraKmOMDh8+rLq6Oi1btkxut/uUn0XUV4MHD9bixYu1aNEiBQIBXXbZZfL5fNq6datcLpfy8/M1b948PfLII1qyZInmzJmj+vr6Lm/5AehfCCEAITVo0CB5PB796le/0vvvv6/PPvtMaWlpmjt3ru67774uax0Oh2bPnq377rtPxcXF3d6f3+/X8OHD5XA45HK5NH78eOXn52vhwoVyuVwhn//BBx/Uueeeq/LycjU1NWnIkCGaNGlScPbRo0frhRde0KJFi/T4448rKytLy5Yt6/FF3gDOLA5z4opDAAAAy/BbYwAAwFqEEAAAsBYhBAAArEUIAQAAaxFCAADAWoQQAACwFiEEAACsRQgBAABrEUIAAMBahBAAALAWIQQAAKxFCAEAAGv9P0IVRRyjOMUqAAAAAElFTkSuQmCC"
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "nmf_conf_mtx = confusion_matrix(train_data['Category'], [kmeans_lab2cat_nmf[lab] for lab in train_pred_nmf])\n#sns.heatmap(nmf_conf_mtx, xticklabels=cat_id_df.Category.values, yticklabels=cat_id_df.Category.values,\n            #annot=True, fmt='d', cmap='Greens')\nplt.xlabel('NMF Pred')\nplt.ylabel('True')",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 62,
+      "outputs": [
+        {
+          "execution_count": 62,
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": "Text(0, 0.5, 'True')"
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "<Figure size 640x480 with 1 Axes>",
+            "image/png": "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ADAWIQQAfpKUlKSlS5eGegwAPiCEAPjd5MmTZbPZ9Mgjj7TY/sILL8hms3mvv/HGG7LZbDrvvPP03XfftVj7z3/+UzabrdX1/3t54IEHTjtLUlKSd925556roUOHavPmzX56pAA6OkIIQEDExMRo8eLF+uabb350bZcuXbR169YW25566in16dOn1fUff/yx6urqvJcFCxac8fYXLlyouro6VVVVacSIEcrMzNQ777zT6tqmpqYfnRdA+CCEAAREenq6EhISVFRU9KNrs7OztXr1au/1EydOaMOGDcrOzm51fffu3ZWQkOC9dO7c+Yy336VLFyUkJGjgwIEqLi5WbGys/vrXv0o6+YrRQw89pKysLDkcDt1+++2SpPLycl155ZWKjY1VYmKiZs+erePHj3tv88CBA5owYYJiY2PVt29flZSU/OjjBHD2IYQABERkZKQefvhhPfHEE/riiy/OuPbWW2/V9u3btX//fknS888/r6SkJA0dOtTvc0VFRemcc85p8crPY489puTkZFVVVenBBx/UZ599puuuu06//vWv9f7772vjxo0qLy/XzJkzvftMnjxZtbW1ev311/Xcc89pxYoVOnDggN/nBRBYhBCAgLnhhhuUkpKigoKCM67r3r27rr/+eq1du1aStHr1ak2ZMuW063v37q3OnTt7L4cPH27TPE1NTSoqKlJDQ4PGjh3r3T527Fjdc889uuiii3TRRRepqKhIN998s+bOnasBAwbo5z//uZYtW6ann35a3333nfbu3atXXnlFq1at0s9+9jMNGzZMTz31lE6cONGmOQCcPaJCPQCA8LZ48WKNHTtW8+bNO+O6KVOmaM6cObrllltUUVGhzZs3a/v27a2u3b59u7p06eK9ft55553xtu+77z498MAD+u6779S5c2c98sgjGj9+vPfPhw8f3mL9v/71L73//vst3u6yLEsej0f79u3T3r17FRUVpWHDhnn//OKLL1bXrl3POAeAsw8hBCCgrrrqKmVkZCgvL0+TJ08+7brrr79et99+u2677TZNmDBB3bp1O+3avn37+hQd8+fP1+TJk9W5c2fFx8e3+CSaJJ177rktrh87dkx33HGHZs+efcpt9enTR3v37m3zfQM4uxFCAALukUceUUpKigYNGnTaNVFRUcrKytKjjz6qV155xa/3HxcXp/79+7d5/dChQ7Vr167T7nPxxRfr+++/V2VlpUaMGCHp5CfZjhw54o9xAQQR5wgBCLjLL79cN998s5YtW3bGdQ899JAOHjyojIyMIE3Wuvvuu0/vvPOOZs6cqerqan3yySf6y1/+4j1ZetCgQbruuut0xx136N1331VlZaWmTp2q2NjYkM4NwHeEEICgWLhwoTwezxnXREdHKy4u7pS3roLtiiuu0Jtvvqm9e/fqyiuv1JAhQ5Sfn6+ePXt616xZs0Y9e/bU6NGjdeONN+r2229X9+7dQzg1gPawWZZlhXoIAACAUOAVIQAAYCxCCAAAGIsQAgAAxiKEAACAsQghAABgLEIIAAAYixACAADGIoQAAICxCCEAAGAsQggAABiLEAIAAMYihAAAgLH+H7FIUPiJS3fnAAAAAElFTkSuQmCC"
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "data = {\n    'n_components': [2, 5, 7, 10],\n    'svd_acc': [0.548, 0.947, 0.938, 0.939],\n    'nmf_acc': [0.476, 0.908, 0.764, 0.642]\n}\ndf = pd.DataFrame(data)\nprint(df)",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 63,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "   n_components  svd_acc  nmf_acc\n0             2    0.548    0.476\n1             5    0.947    0.908\n2             7    0.938    0.764\n3            10    0.939    0.642\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": "Supervised Model Training and Evaluation",
+      "metadata": {}
+    },
+    {
+      "cell_type": "code",
+      "source": "# as we determined previously, SVD seems work better than NMF with this particular dataset\n# we will only use logstic regression with svd\nlogreg = LogisticRegression()\nlogreg.fit(train_features_svd, train_data['Category'])\ntrain_pred = logreg.predict(train_features_svd)\ntest_pred = logreg.predict(test_features_svd) # submit to get acc\n\nlogreg_acc_train = accuracy_score(train_data['Category'], train_pred)\nprint('Accuracy using logistic regression:', logreg_acc_train)",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 64,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "Accuracy using logistic regression: 0.956140350877193\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": "# reduce the training dataset to 50% \nx, y, x_true, y_true = train_test_split(train_features, true_labels, train_size=0.5, test_size=0.2, random_state=0)\n\nsvd = TruncatedSVD(n_components=5)\nx_svd = svd.fit_transform(x)\ny_svd = svd.fit_transform(y)\n\n# Kmeans\nkmeans = KMeans(n_clusters=5, n_init=10, random_state=0)\nkmeans.fit(x_svd)\nx_pred_kmeans = kmeans.labels_\ny_pred_kmeans = kmeans.predict(y_svd)\n\n# LogReg\nlogreg = LogisticRegression()\nlogreg.fit(x_svd, x_true)\nx_pred_logreg = logreg.predict(x_svd)\ny_pred_logreg = logreg.predict(y_svd)\n\n# test accuracy \nx_acc_kmeans = accuracy_score(x_true, mapping(x_true, x_pred_kmeans))\ny_acc_kmeans = accuracy_score(y_true, mapping(y_true, y_pred_kmeans))\nprint('x_acc_kmeans:', x_acc_kmeans)\nprint('y_acc_kmeans:', y_acc_kmeans)\n\nx_acc_lr = accuracy_score(x_true, x_pred_logreg)\ny_acc_lr = accuracy_score(x_true, x_pred_logreg)\nprint('x_acc_lr: ', x_acc_lr)\nprint('y_acc_lr:', y_acc_lr)",
+      "metadata": {
+        "trusted": true
+      },
+      "execution_count": 65,
+      "outputs": [
+        {
+          "name": "stdout",
+          "text": "x_acc_kmeans: 0.23751686909581646\ny_acc_kmeans: 0.6195286195286195\nx_acc_lr:  0.941970310391363\ny_acc_lr: 0.941970310391363\n",
+          "output_type": "stream"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": "Analysis: Logistic Regression does better, even with only 50% of the data.",
+      "metadata": {}
+    }
+  ]
+}
